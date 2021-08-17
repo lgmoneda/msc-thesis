@@ -1,3 +1,7 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
 def reverse_learning_curve_by_sample(train, holdout, model, features, target, time_column, time_sort, performance_function, n_rounds=5):
     results = {"round": [], "holdout_performance": [], "sample_size": []}
     initial_size = int(len(train) / n_rounds)
@@ -126,3 +130,13 @@ def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap
         plt.title("Importance by group")
     else:
         plt.title(title)
+
+def plot_feature_migration_from_learning_curve_results(results, features):
+    all_times_importance = pd.DataFrame(index=features)
+    for imp in results["feature_importance"]:
+        all_times_importance = all_times_importance.merge(imp, how="left", left_index=True,
+                                right_index=True)
+
+    plot_shap_difference(all_times_importance, title="Feature importance migration from the reverse learning curve")
+
+    return all_times_importance
