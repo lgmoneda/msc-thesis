@@ -23,7 +23,7 @@ def reverse_learning_curve(train, holdout, model, features, target, time_column,
     train_time_segments = np.sort(train[time_column].unique())[::-1]
 
     results = {"round": [], "holdout_performance": [], "feature_importance": [],
-               "sample_size": [], "last_period_included": []}
+               "sample_size": [], "last_period_included": [], "holdout_performance_by_period": []}
     initial_size = int(len(train) / n_rounds)
     sample_sizes = np.linspace(initial_size, len(train), n_rounds, dtype=int)
 
@@ -50,13 +50,15 @@ def reverse_learning_curve(train, holdout, model, features, target, time_column,
 
         results["sample_size"].append(sample_size)
         results["last_period_included"].append(time_segment)
+        holdout["pred"] = model.predict_proba(holdout[features])[:, 1]
         performance = performance_function(holdout[target],
-                                           model.predict_proba(holdout[features])[:, 1])
+                                           holdout["pred"] )
         results["holdout_performance"].append(performance)
+        results["holdout_performance_by_period"].append(holdout.groupby(time_column).apply(lambda x: performance_function(x[target], x["pred"])))
 
     return results
 
-def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap=None, threshold=0):
+def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap=None, threshold=0, save_as=None):
     """
     Compares shap importances between multiple groups.
     Function created by @tatasz.
@@ -130,13 +132,19 @@ def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap
         plt.title("Importance by group")
     else:
         plt.title(title)
+        
+    if save_as is not None:
+        ax1.set_rasterized(True)
+        ax2.set_rasterized(True)
+        fig.savefig(save_as + ".jpg", quality=95)
+        fig.savefig(save_as, format="eps")
 
-def plot_feature_migration_from_learning_curve_results(results, features):
+def plot_feature_migration_from_learning_curve_results(results, features, save_as=None):
     all_times_importance = pd.DataFrame(index=features)
     for imp in results["feature_importance"]:
         all_times_importance = all_times_importance.merge(imp, how="left", left_index=True,
                                 right_index=True)
 
-    plot_shap_difference(all_times_importance, title="Feature importance migration from the reverse learning curve")
-
+    plot_shap_difference(all_times_importance, title="Feature importance migration from the reverse learning curve", save_as=save_as)
+    
     return all_times_importance
