@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from sklearn.inspection import permutation_importance
+
 def reverse_learning_curve_by_sample(train, holdout, model, features, target, time_column, time_sort, performance_function, n_rounds=5):
     results = {"round": [], "holdout_performance": [], "sample_size": []}
     initial_size = int(len(train) / n_rounds)
@@ -19,14 +21,16 @@ def reverse_learning_curve_by_sample(train, holdout, model, features, target, ti
     return results
 
 def reverse_learning_curve(train, holdout, model, features, target, time_column,
-                           performance_function, n_rounds=5, trt_model=False, verbose=False):
+                           performance_function, n_rounds=5, trt_model=False, verbose=False, use_permutation_importance=True):
     train_time_segments = np.sort(train[time_column].unique())[::-1]
 
     results = {"round": [], "holdout_performance": [], "feature_importance": [],
                "sample_size": [], "last_period_included": [], "holdout_performance_by_period": []}
     initial_size = int(len(train) / n_rounds)
     sample_sizes = np.linspace(initial_size, len(train), n_rounds, dtype=int)
-
+    
+    if use_permutation_importance:
+        sample_holdout = holdout.sample(frac=0.1)
     for nth, time_segment in enumerate(train_time_segments):
         if verbose: print(train_time_segments[:nth+1])
         if trt_model:
@@ -38,12 +42,20 @@ def reverse_learning_curve(train, holdout, model, features, target, time_column,
 
         sample_size = train[time_column].isin(train_time_segments[:nth+1]).sum()
         ### Feature Importance
-        if trt_model:
-            model_importances = model.feature_importance()
+        if use_permutation_importance:
 
-        else:
-            model_importances = model.feature_importances_
+            model_importances = permutation_importance(model, sample_holdout[features], 
+                                                       sample_holdout[target], n_jobs=-1,
+                                                       random_state=42)
+            model_importances = model_importances["importances_mean"]
             model_importances = pd.Series(model_importances, index=features)
+        else:
+            if trt_model:
+                model_importances = model.feature_importance()
+
+            else:
+                model_importances = model.feature_importances_
+                model_importances = pd.Series(model_importances, index=features)
 
         model_importances.rename(time_segment, inplace=True)
         results["feature_importance"].append(model_importances)
