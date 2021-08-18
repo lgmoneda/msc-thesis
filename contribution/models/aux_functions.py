@@ -145,6 +145,6 @@ def plot_feature_migration_from_learning_curve_results(results, features, save_a
         all_times_importance = all_times_importance.merge(imp, how="left", left_index=True,
                                 right_index=True)
 
-    plot_shap_difference(all_times_importance, title="Feature importance migration from the reverse learning curve", save_as=save_as)
+    plot_shap_difference(all_times_importance, title="", save_as=save_as)
     
     return all_times_importance
