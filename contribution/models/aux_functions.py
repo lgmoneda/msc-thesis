@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from sklearn.inspection import permutation_importance
+from sklearn.metrics import make_scorer
 
 def reverse_learning_curve_by_sample(train, holdout, model, features, target, time_column, time_sort, performance_function, n_rounds=5):
     results = {"round": [], "holdout_performance": [], "sample_size": []}
@@ -45,8 +46,8 @@ def reverse_learning_curve(train, holdout, model, features, target, time_column,
         if use_permutation_importance:
 
             model_importances = permutation_importance(model, sample_holdout[features], 
-                                                       sample_holdout[target], n_jobs=-1,
-                                                       random_state=42)
+                                                       sample_holdout[target],
+                                                       random_state=42, scoring=make_scorer(performance_function))
             model_importances = model_importances["importances_mean"]
             model_importances = pd.Series(model_importances, index=features)
         else:
@@ -143,7 +144,7 @@ def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap
     if title is None:
         plt.title("Importance by group")
     else:
-        plt.title(title)
+        plt.title(title)        
         
     if save_as is not None:
         ax1.set_rasterized(True)
@@ -151,12 +152,12 @@ def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap
         fig.savefig(save_as + ".jpg", quality=95)
         fig.savefig(save_as, format="eps")
 
-def plot_feature_migration_from_learning_curve_results(results, features, save_as=None):
+def plot_feature_migration_from_learning_curve_results(results, features, save_as=None, rotate=False):
     all_times_importance = pd.DataFrame(index=features)
     for imp in results["feature_importance"]:
         all_times_importance = all_times_importance.merge(imp, how="left", left_index=True,
                                 right_index=True)
 
-    plot_shap_difference(all_times_importance, title="", save_as=save_as)
+    plot_shap_difference(all_times_importance, title="", save_as=save_as, rotate=rotate)
     
     return all_times_importance
