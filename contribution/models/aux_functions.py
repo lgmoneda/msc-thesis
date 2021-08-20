@@ -149,8 +149,8 @@ def plot_shap_difference(importance, mode="rank", rotate=False, title=None, cmap
     if save_as is not None:
         ax1.set_rasterized(True)
         ax2.set_rasterized(True)
-        fig.savefig(save_as + ".jpg", quality=95)
-        fig.savefig(save_as, format="eps")
+        fig.savefig(save_as + ".jpg", quality=95, bbox_inches = "tight")
+        fig.savefig(save_as, format="eps", bbox_inches = "tight")
 
 def plot_feature_migration_from_learning_curve_results(results, features, save_as=None, rotate=False):
     all_times_importance = pd.DataFrame(index=features)
@@ -158,6 +158,7 @@ def plot_feature_migration_from_learning_curve_results(results, features, save_a
         all_times_importance = all_times_importance.merge(imp, how="left", left_index=True,
                                 right_index=True)
 
+    all_times_importance = all_times_importance.applymap(np.abs)
     plot_shap_difference(all_times_importance, title="", save_as=save_as, rotate=rotate)
     
     return all_times_importance
